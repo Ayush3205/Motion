@@ -20,8 +20,8 @@ Two standalone WebGL projects built with Three.js and Vite — each covering one
 
 | Project | URL |
 |---------|-----|
-| Particle Morph | _Add deployed link_ |
-| Wave Sphere | _Add deployed link_ |
+| Particle Morph | https://motion-xi-one.vercel.app/ |
+| Wave Sphere | motion-iq7w.vercel.app |
 
 **Repository:** https://github.com/Ayush3205/Motion-Interactive
 
