@@ -1,0 +1,251 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="description" content="3D Particle Morphing Sequence — an interactive WebGL experience built with Three.js" />
+  <title>Particle Morph</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet" />
+  <style>
+    :root {
+      --font: 'Inter', sans-serif;
+      --white: #ffffff;
+      --cyan: #a0e8ff;
+      --bg: #000000;
+      --glass-bg: rgba(255, 255, 255, 0.06);
+      --glass-border: rgba(255, 255, 255, 0.12);
+      --ui-opacity: 0.85;
+    }
+
+    *, *::before, *::after {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      background: var(--bg);
+      color: var(--white);
+      font-family: var(--font);
+      overflow: hidden;
+      width: 100vw;
+      height: 100vh;
+    }
+
+    canvas {
+      display: block;
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      opacity: 0;
+      transition: opacity 1s ease;
+    }
+
+    canvas.visible {
+      opacity: 1;
+    }
+
+    #loader {
+      position: fixed;
+      inset: 0;
+      z-index: 100;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      background: var(--bg);
+      transition: opacity 0.8s ease;
+    }
+
+    #loader.hidden {
+      opacity: 0;
+      pointer-events: none;
+    }
+
+    #loader .pulse-text {
+      font-size: 1.1rem;
+      font-weight: 300;
+      letter-spacing: 0.25em;
+      text-transform: uppercase;
+      color: var(--cyan);
+      animation: pulse 1.6s ease-in-out infinite;
+    }
+
+    @keyframes pulse {
+      0%, 100% { opacity: 0.3; }
+      50%      { opacity: 1; }
+    }
+
+    #ui {
+      position: fixed;
+      inset: 0;
+      z-index: 10;
+      pointer-events: none;
+      opacity: 0;
+      transition: opacity 1s ease;
+    }
+
+    #ui.visible {
+      opacity: 1;
+    }
+
+    #shape-name {
+      position: absolute;
+      top: 40px;
+      left: 48px;
+      font-size: 0.7rem;
+      font-weight: 500;
+      letter-spacing: 0.35em;
+      text-transform: uppercase;
+      opacity: var(--ui-opacity);
+    }
+
+    #shape-counter {
+      position: absolute;
+      top: 40px;
+      right: 48px;
+      font-size: 0.7rem;
+      font-weight: 300;
+      letter-spacing: 0.2em;
+      opacity: var(--ui-opacity);
+      font-variant-numeric: tabular-nums;
+    }
+
+    #progress-track {
+      position: absolute;
+      bottom: 0;
+      left: 0;
+      width: 100%;
+      height: 2px;
+      background: rgba(255, 255, 255, 0.08);
+    }
+
+    #progress-fill {
+      height: 100%;
+      width: 0%;
+      background: linear-gradient(90deg, var(--cyan), var(--white));
+      transition: none;
+    }
+
+    #nav-buttons {
+      position: absolute;
+      bottom: 36px;
+      left: 50%;
+      transform: translateX(-50%);
+      display: none;
+      gap: 12px;
+      pointer-events: auto;
+    }
+
+    #nav-buttons.active {
+      display: flex;
+    }
+
+    #nav-buttons button {
+      font-family: var(--font);
+      font-size: 0.65rem;
+      font-weight: 500;
+      letter-spacing: 0.2em;
+      text-transform: uppercase;
+      padding: 10px 28px;
+      border: 1px solid var(--glass-border);
+      border-radius: 6px;
+      background: var(--glass-bg);
+      color: var(--white);
+      cursor: pointer;
+      backdrop-filter: blur(12px);
+      -webkit-backdrop-filter: blur(12px);
+      transition: background 0.3s, border-color 0.3s, opacity 0.3s;
+    }
+
+    #nav-buttons button:hover:not(:disabled) {
+      background: rgba(255, 255, 255, 0.12);
+      border-color: rgba(255, 255, 255, 0.25);
+    }
+
+    #nav-buttons button:disabled {
+      opacity: 0.3;
+      cursor: default;
+    }
+
+    #scroll-hint {
+      position: absolute;
+      bottom: 36px;
+      left: 50%;
+      transform: translateX(-50%);
+      font-size: 0.6rem;
+      font-weight: 300;
+      letter-spacing: 0.25em;
+      text-transform: uppercase;
+      opacity: 0.35;
+      display: none;
+    }
+
+    #scroll-hint.active {
+      display: block;
+    }
+
+    #fatal-error {
+      position: fixed;
+      inset: 0;
+      z-index: 200;
+      display: none;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      background: var(--bg);
+      padding: 40px;
+      text-align: center;
+    }
+
+    #fatal-error.visible {
+      display: flex;
+    }
+
+    #fatal-error h2 {
+      font-size: 1rem;
+      font-weight: 500;
+      letter-spacing: 0.15em;
+      margin-bottom: 12px;
+      color: #ff6b6b;
+    }
+
+    #fatal-error p {
+      font-size: 0.75rem;
+      font-weight: 300;
+      line-height: 1.7;
+      max-width: 480px;
+      opacity: 0.6;
+    }
+  </style>
+</head>
+<body>
+  <div id="loader">
+    <span class="pulse-text">Loading shapes…</span>
+  </div>
+
+  <div id="ui">
+    <div id="shape-name">INDIUM</div>
+    <div id="shape-counter">01 / 04</div>
+    <div id="progress-track">
+      <div id="progress-fill"></div>
+    </div>
+    <div id="nav-buttons">
+      <button id="btn-prev">Prev</button>
+      <button id="btn-next">Next</button>
+    </div>
+    <div id="scroll-hint">Scroll to morph</div>
+  </div>
+
+  <div id="fatal-error">
+    <h2>Something went wrong</h2>
+    <p id="error-message"></p>
+  </div>
+
+  <script type="module" src="/src/main.js"></script>
+</body>
+</html>
